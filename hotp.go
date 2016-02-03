@@ -39,7 +39,7 @@ func importHotp(k *otpKey, params url.Values) (*Hotp, error) {
 		return nil, &Error{ECMissingCounter, "counter parameter is missing", nil}
 	}
 	if i, err := strconv.Atoi(ctr); err != nil {
-		return nil, &Error{ECBadCounter, fmt.Sprintf("invalid counter: %v", ctr), nil}
+		return nil, &Error{ECInvalidCounter, fmt.Sprintf("invalid counter: %v", ctr), nil}
 	} else {
 		r.Counter = i
 	}

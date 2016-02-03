@@ -33,29 +33,24 @@ const (
 
 // key generation error codes
 const (
-	// key generation related errors
 	// missing (or empty) label
 	ECMissingLabel = iota
-	// bad algorithm
-	ECBadAlgorithm
+	// invalid algorithm
+	ECInvalidAlgorithm
 	// something went wrong while reading random bytes
 	ECCantReadRandom
 	// didn't read enough random bytes
 	ECNotEnoughRandom
-
-	// key import related errors
 	// error parsing the url
-	ECBadUrl
+	ECUrlParseError
 	// url scheme != "otpauth"
 	ECWrongScheme
 	// host in the url must be either "totp" or "hotp"
-	ECBadType
+	ECInvalidType
 	// base32 decoding error
 	ECBase32Decoding
-	// algorithm provided is not supported
-	ECWrongAlgorithm
 	// number of digits
-	ECDigits
+	ECInvalidDigits
 	// secret parameter in url is required
 	ECMissingSecret
 
@@ -65,15 +60,13 @@ const (
 	// counter parameter is required for HOTP
 	ECMissingCounter
 	// can't parse counter
-	ECBadCounter
+	ECInvalidCounter
 
 	// TOTP specific errors
 	// url is not TOTP
 	ECNotTotp
-	// period parameter is required for TOTP
-	ECMissingPeriod
 	// can't parse period
-	ECBadPeriod
+	ECInvalidPeriod
 )
 
 // Error is a common error struct returned by generate/import functions.
@@ -130,7 +123,7 @@ func newOtpKey(keyLen int, label, issuer, algorithm string, digits int) (*otpKey
 	case "", "sha1", "sha256", "sha512":
 		a = algorithm
 	default:
-		return nil, &Error{ECBadAlgorithm, fmt.Sprintf("unknown algorithm: %v", algorithm), nil}
+		return nil, &Error{ECInvalidAlgorithm, fmt.Sprintf("unknown algorithm: %v", algorithm), nil}
 	}
 	// generate key
 	b := make([]byte, kl)
@@ -154,14 +147,14 @@ func importOtpKey(u string) (k *otpKey, typ string, params url.Values, err error
 	var otpUrl *url.URL
 	otpUrl, err = url.Parse(u)
 	if err != nil {
-		err = &Error{ECBadUrl, fmt.Sprintf("can't parse url: %v", err.Error()), err}
+		err = &Error{ECUrlParseError, fmt.Sprintf("can't parse url: %v", err.Error()), err}
 	} else if otpUrl.Scheme != "otpauth" {
 		err = &Error{ECWrongScheme, fmt.Sprintf("bad scheme: %s", otpUrl.Scheme), nil}
 	} else {
 		switch otpUrl.Host {
 		case TypeHotp, TypeTotp:
 		default:
-			err = &Error{ECBadType, fmt.Sprintf("bad OTP authentication type: %s", otpUrl.Host), nil}
+			err = &Error{ECInvalidType, fmt.Sprintf("invalid OTP authentication type: %v", otpUrl.Host), nil}
 		}
 	}
 	if err != nil {
@@ -188,7 +181,7 @@ func importOtpKey(u string) (k *otpKey, typ string, params url.Values, err error
 		case "digits":
 			// number of digits
 			if k.Digits, err = strconv.Atoi(vals[0]); err != nil {
-				err = &Error{ECDigits, fmt.Sprintf("invalid digits: %v", vals[0]), err}
+				err = &Error{ECInvalidDigits, fmt.Sprintf("invalid digits: %v", vals[0]), err}
 				return
 			}
 		case "algorithm":
@@ -197,7 +190,7 @@ func importOtpKey(u string) (k *otpKey, typ string, params url.Values, err error
 			case "sha1", "sha256", "sha512":
 				k.Algorithm = vals[0]
 			default:
-				err = &Error{ECWrongAlgorithm, fmt.Sprintf("unknown algorithm: %v", vals[0]), err}
+				err = &Error{ECInvalidAlgorithm, fmt.Sprintf("unknown algorithm: %v", vals[0]), err}
 				return
 			}
 		case "issuer":
@@ -310,7 +303,7 @@ func NewKey(keyType string, keyLen int, label, issuer, algorithm string, digits 
 		if p != "" {
 			pp, err = strconv.Atoi(p)
 			if err != nil {
-				return nil, &Error{ECBadPeriod, fmt.Sprintf("bad period: %v", p), err}
+				return nil, &Error{ECInvalidPeriod, fmt.Sprintf("invalid period: %v", p), err}
 			} else if pp == 0 {
 				pp = DefaultPeriod
 			}
@@ -323,12 +316,12 @@ func NewKey(keyType string, keyLen int, label, issuer, algorithm string, digits 
 		if c != "" {
 			cc, err = strconv.Atoi(c)
 			if err != nil {
-				return nil, &Error{ECBadCounter, fmt.Sprintf("bad counter: %v", c), err}
+				return nil, &Error{ECInvalidCounter, fmt.Sprintf("bad counter: %v", c), err}
 			}
 		}
 		return NewHotp(keyLen, label, issuer, algorithm, digits, cc)
 	default:
-		return nil, &Error{ECBadType, "keyType must be either \"totp\" or \"hotp\"", nil}
+		return nil, &Error{ECInvalidType, fmt.Sprintf("invalid OTP authentication type: %v", keyType), nil}
 	}
 }
 
@@ -349,7 +342,7 @@ func ImportKey(u string) (Key, error) {
 	case TypeHotp:
 		return importHotp(k, args)
 	default:
-		return nil, &Error{ECBadType, "bad key type provided", nil}
+		return nil, &Error{ECInvalidType, fmt.Sprintf("invalid OTP authentication type: %v", typ), nil}
 	}
 }
 
@@ -358,6 +351,3 @@ var (
 	_ Key = (*Totp)(nil)
 	_ Key = (*Hotp)(nil)
 )
-
-// func newOtpKey(keyLen int, label, issuer, algorithm string, digits int) (*otpKey, error) {
-// func importOtpKey(u string) (k *otpKey, typ string, params url.Values, err error) {

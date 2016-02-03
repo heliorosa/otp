@@ -51,7 +51,7 @@ func importTotp(k *otpKey, p url.Values) (*Totp, error) {
 		r.Period = DefaultPeriod
 	}
 	if i, err := strconv.Atoi(td); err != nil {
-		return nil, &Error{ECBadPeriod, fmt.Sprintf("invalid period: %v", td), err}
+		return nil, &Error{ECInvalidPeriod, fmt.Sprintf("invalid period: %v", td), err}
 	} else {
 		r.Period = i
 	}
