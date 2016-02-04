@@ -49,8 +49,7 @@ func importTotp(k *otpKey, p url.Values) (*Totp, error) {
 	td := p.Get("period")
 	if td == "" {
 		r.Period = DefaultPeriod
-	}
-	if i, err := strconv.Atoi(td); err != nil {
+	} else if i, err := strconv.Atoi(td); err != nil {
 		return nil, &Error{ECInvalidPeriod, fmt.Sprintf("invalid period: %v", td), err}
 	} else {
 		r.Period = i
@@ -71,9 +70,7 @@ func ImportTotp(u string) (*Totp, error) {
 }
 
 // Url returns the key in otpauth format
-func (t *Totp) Url() string {
-	return t.url(TypeTotp, url.Values{"period": []string{strconv.Itoa(t.Period)}})
-}
+func (t *Totp) Url() string { return t.url(TypeTotp, url.Values{}) }
 
 // String returns the same as Url()
 func (t *Totp) String() string { return t.Url() }
@@ -87,8 +84,10 @@ func (t *Totp) CodePeriod(p int) int {
 // CodeTime returns the code for the time tm
 func (t *Totp) CodeTime(tm time.Time) int { return t.CodePeriod(int(tm.Unix() / int64(t.Period))) }
 
+var timeNow = time.Now
+
 // Code returns the current code
-func (t *Totp) Code() int { return t.CodeTime(time.Now()) }
+func (t *Totp) Code() int { return t.CodeTime(timeNow()) }
 
 // Type returns "totp"
 func (t *Totp) Type() string { return TypeTotp }
