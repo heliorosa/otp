@@ -1,37 +1,75 @@
 package otp
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 func TestTotp(t *testing.T) {
-	k, err := NewTotpWithDefaults("myKey", "")
-	if err != nil {
+	// invalid period provided
+	k, err := ImportKey("otpauth://totp/mydomain.com?secret=ADS2OR6Q6K3OJZDW&period=asd")
+	if err == nil {
+		t.Error("an error was expected")
+		return
+	} else if !checkError(err, ECInvalidPeriod) {
+		t.Error("got the wrong error")
+		return
+	}
+	// create a new key
+	if k, err = NewTotp(10, "mydomain.com", "", "", 6, 30); err != nil {
 		t.Error(err)
 		return
 	}
-	if k, err = ImportTotp("otpauth://totp/myKey?digits=8&period=60&secret=ADS2OR6Q6K3OJZDW"); err != nil {
+	// import error
+	if k, err = ImportTotp(""); err == nil {
+		t.Error("an error was expected, got nil")
+		return
+	}
+	// import
+	if k, err = ImportTotp("otpauth://totp/mydomain.com?digits=8&period=60&secret=ADS2OR6Q6K3OJZDW"); err != nil {
 		t.Error(err)
 		return
 	}
-	if k.Label != "myKey" {
+	// check values
+	kt := k.(*Totp)
+	// same label ?
+	if kt.Label != "mydomain.com" {
 		t.Error("got a different label")
 		return
 	}
-	if k.Digits != 8 {
+	// same digits ?
+	if kt.Digits != 8 {
 		t.Error("digits should be 8")
 		return
 	}
-	if k.Period != 60 {
+	// same period ?
+	if kt.Period != 60 {
 		t.Error("period should be 60")
 		return
 	}
-	if k.Key32() != "ADS2OR6Q6K3OJZDW" {
+	// same key ?
+	if kt.Key32() != "ADS2OR6Q6K3OJZDW" {
 		t.Error("got a bad key")
 		return
 	}
-	if k, err = ImportTotp("otpauth://totp/myKey?digits=6&period=30&secret=ADS2OR6Q6K3OJZDW"); err != nil {
+	// try to import a non totp url
+	if k, err = ImportTotp("otpauth://hotp/mydomain.com?digits=8&period=60&secret=ADS2OR6Q6K3OJZDW"); err == nil {
+		t.Error("an error was expected, got nil")
+		return
+	} else if !checkError(err, ECNotTotp) {
+		t.Error("got the wrong error")
+		return
+	}
+	const otpUrl = "otpauth://totp/mydomain.com?secret=ADS2OR6Q6K3OJZDW"
+	if kt, err = ImportTotp(otpUrl); err != nil {
 		t.Error(err)
 		return
 	}
+	if kt.String() != otpUrl {
+		t.Error("the url is different than expected")
+		return
+	}
+	// check some codes
 	periodCodes := []struct{ p, c int }{
 		{1, 848969},
 		{2, 292828},
@@ -39,9 +77,14 @@ func TestTotp(t *testing.T) {
 		{100, 676687},
 	}
 	for _, pc := range periodCodes {
-		if code := k.CodePeriod(pc.p); code != pc.c {
+		if code := kt.CodePeriod(pc.p); code != pc.c {
 			t.Error("got different codes. expected:", pc.c, "got:", code)
 			return
 		}
+	}
+	timeNow = func() time.Time { return time.Unix(int64(kt.Period), 0) }
+	if kt.Code() != periodCodes[0].c {
+		t.Error("got the wrong code")
+		return
 	}
 }
