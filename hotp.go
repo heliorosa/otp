@@ -69,9 +69,14 @@ func (h *Hotp) Url() string {
 func (h *Hotp) String() string { return h.Url() }
 
 // Code returns the current code
-func (h *Hotp) Code() int {
-	c := h.hashTruncateInt(h.Counter)
-	return int(binary.BigEndian.Uint32(c)) % int(math.Pow10(h.Digits))
+func (h *Hotp) Code() int { return h.codeCounter(h.Counter) }
+
+// CodeCounter returns the code for the counter c
+func (h *Hotp) CodeCounter(c int) int { return h.codeCounter(c) }
+
+// returns the code for counter c
+func (h *Hotp) codeCounter(c int) int {
+	return int(binary.BigEndian.Uint32(h.hashTruncateInt(c))) % int(math.Pow10(h.Digits))
 }
 
 // Type returns "hotp"
