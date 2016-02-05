@@ -18,68 +18,54 @@ import (
 	"strings"
 )
 
-// types of OTP auth supported
+// Types of OTP auth supported.
 const (
-	TypeTotp = "totp"
-	TypeHotp = "hotp"
+	TypeTotp = "totp" //TOTP
+	TypeHotp = "hotp" // HOTP
 )
 
-// common defaults for TOTP and HOTP
+// Common defaults for TOTP and HOTP
 const (
-	DefaultDigits    = 6      // 6 digit code
-	DefaultKeyLength = 10     // 10 bytes == 16 base32 digits
-	DefaultAlgorithm = "sha1" // google authenticator only implements sha1
+	DefaultDigits    = 6      // 6 digit code.
+	DefaultKeyLength = 10     // 10 bytes (16 base32 characters).
+	DefaultAlgorithm = "sha1" // SHA1 is the only supported.
 )
 
-// key generation error codes
+// Error codes.
 const (
-	// missing (or empty) label
-	ECMissingLabel = iota
-	// invalid algorithm
-	ECInvalidAlgorithm
-	// something went wrong while reading random bytes
-	ECCantReadRandom
-	// didn't read enough random bytes
-	ECNotEnoughRandom
-	// error parsing the url
-	ECUrlParseError
-	// url scheme != "otpauth"
-	ECWrongScheme
-	// host in the url must be either "totp" or "hotp"
-	ECInvalidOtpType
-	// base32 decoding error
-	ECBase32Decoding
-	// number of digits
-	ECInvalidDigits
-	// secret parameter in url is required
-	ECMissingSecret
+	// Common errors for TOTP and HOTP.
+	ECMissingLabel     = iota // Missing (or empty) label.
+	ECInvalidAlgorithm        // Invalid algorithm.
+	ECCantReadRandom          // Something went wrong while reading random bytes.
+	ECNotEnoughRandom         // Didn't read enough random bytes.
+	ECUrlParseError           // Error parsing the url.
+	ECWrongScheme             // Url scheme != "otpauth".
+	ECInvalidOtpType          // Host in the url must be either "totp" or "hotp".
+	ECBase32Decoding          // Base32 decoding error.
+	ECInvalidDigits           // Invalid number of digits.
+	ECMissingSecret           // Secret parameter is missing.
 
-	// HOTP specific errors
-	// url is not HOTP
-	ECNotHotp
-	// counter parameter is required for HOTP
-	ECMissingCounter
-	// can't parse counter
-	ECInvalidCounter
+	// HOTP specific errors.
+	ECNotHotp        // Url is not HOTP.
+	ECMissingCounter // Counter parameter is missing.
+	ECInvalidCounter // Can't parse counter.
 
-	// TOTP specific errors
-	// url is not TOTP
-	ECNotTotp
-	// can't parse period
-	ECInvalidPeriod
+	// TOTP specific errors.
+	ECNotTotp       // Url is not TOTP.
+	ECInvalidPeriod // Can't parse period parameter.
 )
 
-// Error is a common error struct returned by generate/import functions.
-// The Code can hold any of the EC* error codes.
-// The Desc is a description of the error.
-// The Err holds the original error if any.
+// Error is a common error struct returned by new/import functions.
 type Error struct {
+	// The field Code can hold any of the EC* error codes.
 	Code int
+	// The field Desc is a description of the error.
 	Desc string
-	Err  error
+	// The field Err holds the original error if any.
+	Err error
 }
 
-// implement error
+// Implement error.
 func (g *Error) Error() string {
 	var (
 		f = "%v"
@@ -92,16 +78,21 @@ func (g *Error) Error() string {
 	return fmt.Sprintf(f, a...)
 }
 
-// common otp fields
+// Common OTP fields.
 type otpKey struct {
-	Key       []byte // key
-	Label     string // label
-	Issuer    string // issuer
-	Algorithm string // used algorithm
-	Digits    int    // number of digits
+	// Secret key. Required.
+	Key []byte
+	// Label. Required.
+	Label string
+	// Issuer. Not required but recomended.
+	Issuer string
+	// Algorithm. Only SHA1.
+	Algorithm string
+	// Digits. Usualy 6 or 8.
+	Digits int
 }
 
-// create a new *otpKey
+// Create a new *otpKey.
 func newOtpKey(keyLen int, label, issuer, algorithm string, digits int) (*otpKey, error) {
 	// label is required
 	if label == "" {
@@ -141,7 +132,7 @@ func newOtpKey(keyLen int, label, issuer, algorithm string, digits int) (*otpKey
 	}, nil
 }
 
-// import otpauth url
+// Import otpauth url.
 func importOtpKey(u string) (k *otpKey, typ string, params url.Values, err error) {
 	// parse and check scheme and host
 	var otpUrl *url.URL
@@ -160,6 +151,7 @@ func importOtpKey(u string) (k *otpKey, typ string, params url.Values, err error
 	if err != nil {
 		return
 	}
+	// set OTP type
 	typ = otpUrl.Host
 	k = &otpKey{
 		Label:  strings.TrimPrefix(otpUrl.Path, "/"),
@@ -197,21 +189,22 @@ func importOtpKey(u string) (k *otpKey, typ string, params url.Values, err error
 			// issuer
 			k.Issuer = vals[0]
 		default:
+			// other parameters will be returned to the caller
 			params.Set(name, vals[0])
 		}
 	}
 	// secret is required and was not provided
 	if k.Key == nil {
-		err = &Error{ECMissingSecret, "the secret argument is required", nil}
+		err = &Error{ECMissingSecret, "the secret parameter is required", nil}
 		return
 	}
 	return
 }
 
-// Key32 returns the Key field encoded in base32
+// Key32 returns the Key field encoded in base32.
 func (k *otpKey) Key32() string { return base32.StdEncoding.EncodeToString(k.Key) }
 
-// SetKey32 sets the key from a base32 string
+// SetKey32 sets the Key field from a base32 string.
 func (k *otpKey) SetKey32(key string) error {
 	var err error
 	if k.Key, err = base32.StdEncoding.DecodeString(key); err != nil {
@@ -220,7 +213,7 @@ func (k *otpKey) SetKey32(key string) error {
 	return nil
 }
 
-// return an otpauth url
+// Return an otpauth url.
 func (k *otpKey) url(otpType string, params url.Values) string {
 	// check otp type
 	switch otpType {
@@ -255,6 +248,7 @@ func (k *otpKey) url(otpType string, params url.Values) string {
 	return u.String()
 }
 
+// hashing and truncation
 func (k *otpKey) hashTruncateInt(i int) []byte {
 	var sha func() hash.Hash
 	switch a := strings.ToLower(k.Algorithm); a {
@@ -281,7 +275,7 @@ func (k *otpKey) hashTruncateInt(i int) []byte {
 	return c
 }
 
-// Key represents an OTP key
+// Key represents an OTP key.
 type Key interface {
 	Code() int
 	Key32() string
@@ -291,15 +285,16 @@ type Key interface {
 	fmt.Stringer
 }
 
-// NewKey creates a new OTP key
-// keyType must be either "totp" or "hotp"
-// label is required
-// keyLen <= 0, defaults to 10
-// algorithm == "", defaults to "sha1"
+// NewKey creates a new OTP key.
+// keyType must be either TypeTotp or TypeHotp.
+// label is required. keyLen <= 0, defaults to 10.
+// algorithm == "", defaults to "sha1".
 // digits <= 0, defaults to 6
 func NewKey(keyType string, keyLen int, label, issuer, algorithm string, digits int, extraParams url.Values) (Key, error) {
 	switch keyType {
 	case TypeTotp:
+		// TOTP
+		// parse period parameter
 		p := extraParams.Get("period")
 		var (
 			err error
@@ -315,6 +310,8 @@ func NewKey(keyType string, keyLen int, label, issuer, algorithm string, digits 
 		}
 		return NewTotp(keyLen, label, issuer, algorithm, digits, pp)
 	case TypeHotp:
+		// HOTP
+		// check for counter parameter
 		c := extraParams.Get("counter")
 		if c == "" {
 			return nil, &Error{ECMissingCounter, "counter parameter is missing", nil}
@@ -329,12 +326,12 @@ func NewKey(keyType string, keyLen int, label, issuer, algorithm string, digits 
 	}
 }
 
-// NewKeyWithDefaults calls NewKey with the default values
+// NewKeyWithDefaults calls NewKey with the default values.
 func NewKeyWithDefaults(keyType, label, issuer string, extraParams url.Values) (Key, error) {
 	return NewKey(keyType, 0, label, issuer, "", 0, extraParams)
 }
 
-// import an OTP key from an otpauth url
+// Import an OTP key from an otpauth url.
 func ImportKey(u string) (Key, error) {
 	k, typ, args, err := importOtpKey(u)
 	if err != nil {
