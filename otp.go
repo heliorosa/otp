@@ -84,11 +84,11 @@ type otpKey struct {
 	Key []byte
 	// Label. Required.
 	Label string
-	// Issuer. Not required but recomended.
+	// Issuer. Not required but recommended.
 	Issuer string
 	// Algorithm. Only SHA1.
 	Algorithm string
-	// Digits. Usualy 6 or 8.
+	// Digits. Usually 6 or 8.
 	Digits int
 }
 
