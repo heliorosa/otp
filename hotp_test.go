@@ -89,4 +89,9 @@ func TestHotp(t *testing.T) {
 		t.Error("got the wrong code")
 		return
 	}
+	kh.Counter = 0
+	if kh.CodeN(5) != codes[5] {
+		t.Error("got the wrong code")
+		return
+	}
 }

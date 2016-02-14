@@ -87,4 +87,9 @@ func TestTotp(t *testing.T) {
 		t.Error("got the wrong code")
 		return
 	}
+	timeNow = func() time.Time { return time.Unix(0, 0) }
+	if kt.CodeN(periodCodes[0].p) != periodCodes[0].c {
+		t.Error("got the wrong code")
+		return
+	}
 }

@@ -278,6 +278,7 @@ func (k *otpKey) hashTruncateInt(i int) []byte {
 // Key represents an OTP key.
 type Key interface {
 	Code() int
+	CodeN(n int) int
 	Key32() string
 	SetKey32(string) error
 	Url() string

@@ -91,5 +91,8 @@ var timeNow = time.Now
 // Code returns the current code.
 func (t *Totp) Code() int { return t.CodeTime(timeNow()) }
 
+// CodeN returns the code for the current period+n.
+func (t *Totp) CodeN(n int) int { return t.CodePeriod(int(timeNow().Unix())/t.Period + n) }
+
 // Type returns TypeTotp.
 func (t *Totp) Type() string { return TypeTotp }

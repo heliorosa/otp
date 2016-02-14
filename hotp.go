@@ -73,6 +73,9 @@ func (h *Hotp) String() string { return h.Url() }
 // Code returns the current code.
 func (h *Hotp) Code() int { return h.codeCounter(h.Counter) }
 
+// CodeN returns the code for counter+n.
+func (h *Hotp) CodeN(n int) int { return h.codeCounter(h.Counter + n) }
+
 // CodeCounter returns the code for the counter c.
 func (h *Hotp) CodeCounter(c int) int { return h.codeCounter(c) }
 
