@@ -11,7 +11,7 @@ import (
 // Hotp key.
 type Hotp struct {
 	// Common fields
-	*otpKey
+	*Common
 	// Counter
 	Counter int
 }
@@ -20,11 +20,11 @@ type Hotp struct {
 // keyLen <= 0, defaults to 10. digits <= 0, defaults to 6.
 // algorithm == "", defaults to "sha1".
 func NewHotp(keyLen int, label, issuer, algorithm string, digits, counter int) (*Hotp, error) {
-	k, err := newOtpKey(keyLen, label, issuer, algorithm, digits)
+	k, err := newCommon(keyLen, label, issuer, algorithm, digits)
 	if err != nil {
 		return nil, err
 	}
-	return &Hotp{otpKey: k, Counter: counter}, nil
+	return &Hotp{Common: k, Counter: counter}, nil
 }
 
 // NewHotpWithDefaults calls NewHotp with the default values.
@@ -33,8 +33,8 @@ func NewHotpWithDefaults(label, issuer string) (*Hotp, error) {
 }
 
 // import hotp key
-func importHotp(k *otpKey, params url.Values) (*Hotp, error) {
-	r := &Hotp{otpKey: k}
+func importHotp(k *Common, params url.Values) (*Hotp, error) {
+	r := &Hotp{Common: k}
 	// verify counter
 	ctr := params.Get("counter")
 	if ctr == "" {
@@ -51,7 +51,7 @@ func importHotp(k *otpKey, params url.Values) (*Hotp, error) {
 // ImportHotp imports an url in the otpauth format.
 func ImportHotp(u string) (*Hotp, error) {
 	// import url
-	k, t, p, err := importOtpKey(u)
+	k, t, p, err := importCommon(u)
 	if err != nil {
 		return nil, err
 	}

@@ -79,7 +79,7 @@ func (g *Error) Error() string {
 }
 
 // Common OTP fields.
-type otpKey struct {
+type Common struct {
 	// Secret key. Required.
 	Key []byte
 	// Label. Required.
@@ -92,8 +92,10 @@ type otpKey struct {
 	Digits int
 }
 
+// func (k* otpKey)
+
 // Create a new *otpKey.
-func newOtpKey(keyLen int, label, issuer, algorithm string, digits int) (*otpKey, error) {
+func newCommon(keyLen int, label, issuer, algorithm string, digits int) (*Common, error) {
 	// label is required
 	if label == "" {
 		return nil, &Error{ECMissingLabel, "must provide a label", nil}
@@ -123,7 +125,7 @@ func newOtpKey(keyLen int, label, issuer, algorithm string, digits int) (*otpKey
 	} else if n != kl {
 		return nil, &Error{ECNotEnoughRandom, "couldn't read enough random bytes", nil}
 	}
-	return &otpKey{
+	return &Common{
 		Key:       b,
 		Label:     label,
 		Issuer:    issuer,
@@ -133,7 +135,7 @@ func newOtpKey(keyLen int, label, issuer, algorithm string, digits int) (*otpKey
 }
 
 // Import otpauth url.
-func importOtpKey(u string) (k *otpKey, typ string, params url.Values, err error) {
+func importCommon(u string) (k *Common, typ string, params url.Values, err error) {
 	// parse and check scheme and host
 	var otpUrl *url.URL
 	otpUrl, err = url.Parse(u)
@@ -153,7 +155,7 @@ func importOtpKey(u string) (k *otpKey, typ string, params url.Values, err error
 	}
 	// set OTP type
 	typ = otpUrl.Host
-	k = &otpKey{
+	k = &Common{
 		Label:  strings.TrimPrefix(otpUrl.Path, "/"),
 		Digits: DefaultDigits,
 	}
@@ -202,10 +204,10 @@ func importOtpKey(u string) (k *otpKey, typ string, params url.Values, err error
 }
 
 // Key32 returns the Key field encoded in base32.
-func (k *otpKey) Key32() string { return base32.StdEncoding.EncodeToString(k.Key) }
+func (k *Common) Key32() string { return base32.StdEncoding.EncodeToString(k.Key) }
 
 // SetKey32 sets the Key field from a base32 string.
-func (k *otpKey) SetKey32(key string) error {
+func (k *Common) SetKey32(key string) error {
 	var err error
 	if k.Key, err = base32.StdEncoding.DecodeString(key); err != nil {
 		return &Error{ECBase32Decoding, fmt.Sprintf("can't decode base32 key: %v", err.Error()), err}
@@ -214,7 +216,7 @@ func (k *otpKey) SetKey32(key string) error {
 }
 
 // Return an otpauth url.
-func (k *otpKey) url(otpType string, params url.Values) string {
+func (k *Common) url(otpType string, params url.Values) string {
 	// check otp type
 	switch otpType {
 	case TypeTotp, TypeHotp:
@@ -249,7 +251,7 @@ func (k *otpKey) url(otpType string, params url.Values) string {
 }
 
 // hashing and truncation
-func (k *otpKey) hashTruncateInt(i int) []byte {
+func (k *Common) hashTruncateInt(i int) []byte {
 	var sha func() hash.Hash
 	switch a := strings.ToLower(k.Algorithm); a {
 	case "", "sha1":
@@ -334,7 +336,7 @@ func NewKeyWithDefaults(keyType, label, issuer string, extraParams url.Values) (
 
 // Import an OTP key from an otpauth url.
 func ImportKey(u string) (Key, error) {
-	k, typ, args, err := importOtpKey(u)
+	k, typ, args, err := importCommon(u)
 	if err != nil {
 		return nil, err
 	}

@@ -18,7 +18,7 @@ const (
 // Totp key.
 type Totp struct {
 	// common fields
-	*otpKey
+	*Common
 	// Period in seconds
 	Period int
 }
@@ -27,7 +27,7 @@ type Totp struct {
 // keyLen <= 0, defaults to 10. digits <= 0, defaults to 6.
 // period <= 0, defaults to 30. algorithm == "", defaults to "sha1".
 func NewTotp(keyLen int, label, issuer, algorithm string, digits, period int) (*Totp, error) {
-	k, err := newOtpKey(keyLen, label, issuer, algorithm, digits)
+	k, err := newCommon(keyLen, label, issuer, algorithm, digits)
 	if err != nil {
 		return nil, err
 	}
@@ -45,8 +45,8 @@ func NewTotpWithDefaults(label, issuer string) (*Totp, error) {
 }
 
 // import totp url
-func importTotp(k *otpKey, p url.Values) (*Totp, error) {
-	r := &Totp{otpKey: k}
+func importTotp(k *Common, p url.Values) (*Totp, error) {
+	r := &Totp{Common: k}
 	// period
 	td := p.Get("period")
 	if td == "" {
@@ -61,7 +61,7 @@ func importTotp(k *otpKey, p url.Values) (*Totp, error) {
 
 // ImportTotp imports an url in the otpauth format.
 func ImportTotp(u string) (*Totp, error) {
-	k, t, p, err := importOtpKey(u)
+	k, t, p, err := importCommon(u)
 	if err != nil {
 		return nil, err
 	}
